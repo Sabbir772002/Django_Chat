@@ -1,0 +1,95 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: chat_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-chatdb}
+      POSTGRES_USER: ${DB_USER:-chatuser}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-chatpass123}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-chatuser}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chat_network
+
+  # Redis for Caching & Pub/Sub
+  redis:
+    image: redis:7-alpine
+    container_name: chat_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - chat_network
+
+  # Django + Channels Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: chat_backend
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DEBUG: ${DEBUG:-False}
+      DB_ENGINE: django.db.backends.postgresql
+      DB_NAME: ${DB_NAME:-chatdb}
+      DB_USER: ${DB_USER:-chatuser}
+      DB_PASSWORD: ${DB_PASSWORD:-chatpass123}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SECRET_KEY: ${SECRET_KEY:-Y_uhyz-LY5WPThDOkuBYqycTa8YAkAP0ctVdimPrw34}
+      ALLOWED_HOSTS: localhost,127.0.0.1,backend
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://frontend:3000
+    volumes:
+      - ./backend:/app
+    networks:
+      - chat_network
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: chat_frontend
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      - backend
+    environment:
+      # Frontend runs in browser, so use localhost from host machine perspective
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+      NEXT_PUBLIC_WS_URL: ${NEXT_PUBLIC_WS_URL:-ws://localhost:8000}
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - chat_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  chat_network:
+    driver: bridge
