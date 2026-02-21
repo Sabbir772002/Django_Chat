@@ -703,7 +703,8 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
                 ).order_by('-updated_at').first()
                 
                 visitor_info = UserSerializer(visitor).data
-                if latest_session:                    visitor_info['latest_session_id'] = str(latest_session.id)
+                if latest_session:
+                    visitor_info['latest_session_id'] = str(latest_session.id)
                     visitor_info['latest_session_status'] = latest_session.status
                     visitor_info['last_contacted'] = latest_session.updated_at.isoformat()
                 

@@ -32,6 +32,7 @@ export default function Visitor() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const sessionHandledRef = useRef(false);
+  const { isConnected } = useWebSocket(currentSession?.id || null, {
     onSessionCompleted: (_sid) => {
       if (sessionHandledRef.current) return;
       sessionHandledRef.current = true;
@@ -183,6 +184,8 @@ export default function Visitor() {
   const isWaiting = currentSession?.status === 'waiting';
   const isActive = currentSession?.status === 'active';
   const agentName = (currentSession as any)?.agent_name;
+
+  if (!isReady) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />

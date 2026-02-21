@@ -17,7 +17,7 @@ interface WaitingSession {
   created_at: string;
 }
 
-function initials(name: string) {
+function timeAgo(ts: string) {
   const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
   if (s < 60) return 'just now';
   if (s < 3600) return `${Math.floor(s / 60)}m ago`;
