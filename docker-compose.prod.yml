@@ -1,0 +1,57 @@
+version: "3.9"
+
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: chatdb
+      POSTGRES_USER: chatuser
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - chat_network
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - chat_network
+
+  backend:
+    image: chat-backend:latest
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      DEBUG: "False"
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_HOST: redis
+      SECRET_KEY: ${SECRET_KEY}
+      ALLOWED_HOSTS: api.mydomain.com
+    networks:
+      - chat_network
+
+  frontend:
+    image: chat-frontend:latest
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: https://api.mydomain.com
+      NEXT_PUBLIC_WS_URL: wss://api.mydomain.com
+    networks:
+      - chat_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  chat_network:
